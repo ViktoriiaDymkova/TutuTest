@@ -1,14 +1,18 @@
 package guru.qa;
 
-import com.codeborne.selenide.Condition;
 import com.codeborne.selenide.Configuration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
-import static com.codeborne.selenide.Condition.text;
+import java.util.List;
+import java.util.stream.Stream;
+
+import static com.codeborne.selenide.Condition.*;
 import static com.codeborne.selenide.Configuration.baseUrl;
 import static com.codeborne.selenide.Selenide.*;
 
@@ -21,60 +25,60 @@ public class TutuTest {
         Configuration.baseUrl = "https://www.tutu.ru/";
         Configuration.browserSize = "1920x1080";
     }
-    @CsvSource({
-            "Москва, Казань, 18, 21"
-    })
-    @DisplayName("Тест на проверку наличия билетов по маршруту: {0}-{1}- с датами:  {2}-{3}")
-    @ParameterizedTest(name = "Тест на проверку наличия билетов по маршруту: {0}-{1}- с датами:  {2}-{3}")
-    void findPriceTest(String cityfrom, String cityTo, String dateFrom, String dateTo) {
+
+    //поиск наличия ресурсов
+    @ValueSource(strings = {"Отели",
+            "Туры"})
+    @ParameterizedTest(name = "Тест на проверку наличия {0}")
+    void findOtherOptions(String value) {
         open(baseUrl);
-        $(".input_field.j-city_input.j-city_from.j-main").setValue(cityfrom).pressEnter();
-        $(".input_field.j-city_input.j-city_to.j-main").setValue(cityTo).pressEnter();
-        $(".j-date_from").shouldBe(Condition.visible).click();
-        $x("//a[contains(text(),'" + dateFrom +"')]").click();
-        $(".j-date_back").shouldBe(Condition.visible).click();
-        $x("//a[contains(text(),'" + dateTo +"')]").click();
-        $(".button_wrp.j-buttons_block").click();
-        $x("//span[contains(text(), 'предлож')]").shouldHave(text("предлож"));
+        $x("//a[.//*[@class='link' and contains(text(),'" + value + "')]]").click();
+        $("button.order-group-element div").shouldHave(text(value));
     }
 
-//запускаю поиск без обратного билета
+    ///  запускаю 2 маршрута через массив
     @CsvSource({
-            "Москва, Казань, 18"
-    })
-    @ParameterizedTest(name = "Тест на проверку наличия билетов по маршруту: {0}-{1}- на дату:  {2}")
-    void findPriceTestOneWayTicket(String cityfrom, String cityTo, String dateFrom) {
-        open(baseUrl);
-        $(".input_field.j-city_input.j-city_from.j-main").setValue(cityfrom).pressEnter();
-        $(".input_field.j-city_input.j-city_to.j-main").setValue(cityTo).pressEnter();
-        $(".j-date_from").shouldBe(Condition.visible).click();
-        $x("//a[contains(text(),'" + dateFrom +"')]").click();
-        //При запуске на IOS без слипа тест отображается как пройденный, но фактически в хроме не происходит нажатия
-        // на кнопку! Не нашла способа кроме слип. На машине с WINDWS тест отрабатывает без слип.
-        sleep(500);
-        $(".button_wrp.j-buttons_block").click();
-        $x("//span[contains(text(), 'предлож')]").shouldHave(text("предлож"));
-    }
-
-///  запускаю 2 маршрута через массив
-    @CsvSource({
-            "Москва, Казань, 18, 21",
-            "Москва, Самара, 21, 25"
+            "Москва, Казань, 28, 29",
+            "Москва, Самара, 28, 29"
     })
     @DisplayName("Тест на проверку наличия билетов по маршруту: {0}-{1} с датами:  {2}-{3}")
     @ParameterizedTest(name = "Тест на проверку наличия билетов по маршруту: {0}-{1} с датами:  {2}-{3}")
-    void findPriceTest2(String cityfrom, String cityTo, String dateFrom, String dateTo) {
+    void findPriceTest2(String cityfrom, String cityTo, int dateFrom, int dateTo) {
         open(baseUrl);
         Configuration.holdBrowserOpen = true;
+        //выбор городов
         $(".input_field.j-city_input.j-city_from.j-main").setValue(cityfrom).pressEnter();
         $(".input_field.j-city_input.j-city_to.j-main").setValue(cityTo).pressEnter();
-        $(".j-date_from").shouldBe(Condition.visible).click();
-        $x("//a[contains(text(),'" + dateFrom +"')]").click();
-        $(".j-date_back").shouldBe(Condition.visible).click();
-        $x("//a[contains(text(),'" + dateTo +"')]").click();
-        sleep(1000);
+        //нажатие на календарь
+        $(".j-date_from").shouldBe(visible).click();
+        //проверяем видимость календаря тк этот селектор не виден без вызова календаря
+        $(".datepicker_wrapper div#ui-datepicker-div").shouldBe(visible);
+        //поставновка даты туда
+        $x("//a[contains(text(),'" + dateFrom + "')]").click();
+
+        // жмем 2 календ
+        $(".j-date_back").shouldBe(visible).click();
+        //проверяем видимость календаря тк этот селектор так же не виден без вызова календаря
+        $(".datepicker_wrapper div#ui-datepicker-div").shouldBe(visible);
+        //поставновка даты обратно
+        $x("//a[contains(text(),'" + dateTo + "')]").click();
+        //клик
         $(".button_wrp.j-buttons_block").click();
-        $x("//span[contains(text(), 'предлож')]").shouldHave(text("предлож"));
+        //проверка
+        $("#root").shouldHave(text("предлож"));
     }
 
+    @DisplayName("Отправление поездов")
+    static Stream<Arguments> parametrizeTestMethodSource() {
+        return Stream.of(
+                Arguments.of("в Москву ", List.of(6, 7)),
+                Arguments.of("в СПб ", List.of(8, 10))
+        );
+    }
+
+    @MethodSource("parametrizeTestMethodSource")
+    @ParameterizedTest
+    void parametrizeTestMethodSource(String first, List<Integer> second) {
+        System.out.println(first + "c платформы №" + second);
+    }
 }
