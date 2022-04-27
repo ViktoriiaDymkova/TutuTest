@@ -14,9 +14,10 @@ import java.util.stream.Stream;
 
 import static com.codeborne.selenide.Condition.*;
 import static com.codeborne.selenide.Configuration.baseUrl;
+import static com.codeborne.selenide.Selectors.byText;
 import static com.codeborne.selenide.Selenide.*;
 
-
+//это урок 6. тема JUnit 5
 public class TutuTest {
 
     @BeforeEach
@@ -29,10 +30,12 @@ public class TutuTest {
     //поиск наличия ресурсов
     @ValueSource(strings = {"Отели",
             "Туры"})
+    @DisplayName("Тест на проверку наличия сервисов")
     @ParameterizedTest(name = "Тест на проверку наличия {0}")
     void findOtherOptions(String value) {
         open(baseUrl);
-        $x("//a[.//*[@class='link' and contains(text(),'" + value + "')]]").click();
+        $(".l-search_forms_tabs").$(byText(value)).click();
+        // $x("//a[.//*[@class='link' and contains(text(),'" + value + "')]]").click(); это вариант с xpath селектором
         $("button.order-group-element div").shouldHave(text(value));
     }
 
@@ -67,14 +70,13 @@ public class TutuTest {
         $("#root").shouldHave(text("предлож"));
     }
 
-    @DisplayName("Отправление поездов")
     static Stream<Arguments> parametrizeTestMethodSource() {
         return Stream.of(
                 Arguments.of("в Москву ", List.of(6, 7)),
                 Arguments.of("в СПб ", List.of(8, 10))
         );
     }
-
+    @DisplayName("Отправление поездов: ")
     @MethodSource("parametrizeTestMethodSource")
     @ParameterizedTest
     void parametrizeTestMethodSource(String first, List<Integer> second) {
